@@ -50,9 +50,11 @@ class TikTok():
                 self.cf.add_section("count")
                 self.cf.set("count", "count", "35")
                 self.cf.add_section("save")
-                self.cf.set("save", "url", ".\\Download\\")
+                self.cf.set("save", "url", "/Download/")
                 self.cf.add_section("mode")
                 self.cf.set("mode", "mode", "post")
+                self.cf.add_section("stopVid")
+                self.cf.set("stopVid", "stopVid", "")
                 with open("conf.ini","a+") as f:
                     self.cf.write(f)
                 print('----生成成功----')
@@ -70,7 +72,7 @@ class TikTok():
         self.cf.read("conf.ini", encoding="utf-8")
 
         #读取保存路径
-        self.save = self.cf.get("save","url")
+        self.save = os.getcwd() + self.cf.get("save","url")
 
         #读取下载视频个数
         self.count = int(self.cf.get("count","count"))
@@ -91,6 +93,9 @@ class TikTok():
         #保存用户名
         self.nickname = ""
 
+        #读取下载停止标记
+        self.stopVid = str(self.cf.get("stopVid","stopVid"))
+
         print('----读取配置完成----\r')
         self.judge_link()
 
@@ -99,6 +104,20 @@ class TikTok():
         # findall() 查找匹配正则表达式的字符串
         url = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', string)
         return url
+
+    def fabu_time(self,t,type=0):
+        '''
+        将时间戳转换成时间格式
+        :param t:
+        :return:
+        '''
+        timeArray = time.localtime(t)
+        fabu_time = '2021'
+        if type == 1:
+            fabu_time = '{}'.format(time.strftime("%Y%m%d", timeArray))
+        else:
+            fabu_time = '({})'.format(time.strftime("%Y-%m-%d %H-%M-%S", timeArray))
+        return fabu_time
 
     #判断个人主页api链接
     def judge_link(self):
@@ -230,16 +249,31 @@ class TikTok():
         return self,author_list,video_list,aweme_id,nickname,dynamic_cover,max_cursor
 
     def videos_download(self,author_list,video_list,aweme_id,nickname,dynamic_cover,max_cursor):
+        nicknamePath = '/'
+        log_file_name = ''
+        logText = ''
+        vid = ''
         for i in range(self.count):
             try:
                 #创建并检测下载目录是否存在
-                os.makedirs(self.save + self.mode + "\\" + nickname[i])
+                if self.mode == 'post':
+                    nicknamePath = '/' + nickname[i] + '/'
+                else:
+                    nicknamePath = '/' + self.fabu_time(int(time.time()), 1) + '/'
+                log_file_name = self.save + self.mode + nicknamePath + self.fabu_time(int(time.time()), 1) + '.txt'
+                os.makedirs(self.save + self.mode + nicknamePath)
             except:
                 #有目录不再创建
                 pass
             try:
                 jx_url  = f'https://www.iesdouyin.com/web/api/v2/aweme/iteminfo/?item_ids={aweme_id[i]}'    #官方接口
                 js = json.loads(requests.get(url = jx_url,headers=self.headers).text)
+                vid = str(js['item_list'][0]['video']['vid'])
+                try: 
+                    creat_time = self.fabu_time(js['item_list'][0]['create_time'])
+                except:
+                    creat_time = ''
+
                 music_url = str(js['item_list'][0]['music']['play_url']['url_list'][0])
                 music_title = str(js['item_list'][0]['music']['author'])
                 if self.musicarg == "yes":
@@ -252,8 +286,10 @@ class TikTok():
                     content_size = int(music.headers['content-length']) # 下载文件总大小
                     try:
                         if music.status_code == 200: #判断是否响应成功
-                            print('[  音频  ]'+author_list[i]+'[文件 大小]:{size:.2f} MB'.format(size = content_size / chunk_size /1024)) #开始下载，显示下载文件大小
-                            m_url = self.save + self.mode + "\\" + nickname[i] + '\\' + re.sub(r'[\\/:*?"<>|\r\n]+', "_", music_title) + '_' + author_list[i] + '.mp3'
+                            logStr = '[  音频  ]'+author_list[i]+'[文件 大小]:{size:.2f} MB'.format(size = content_size / chunk_size /1024)
+                            logText = logText + '\n' + logStr
+                            print(logStr) #开始下载，显示下载文件大小
+                            m_url = self.save + self.mode + nicknamePath + re.sub(r'[\\/:*?"<>|\r\n]+', "_", music_title) + '_' + author_list[i] + creat_time + '.mp3'
                             with open(m_url,'wb') as file: #显示进度条
                                 for data in music.iter_content(chunk_size = chunk_size):
                                     file.write(data)
@@ -264,7 +300,7 @@ class TikTok():
                     except:
                         input('下载音频出错!')
                     #print('音频 ',music_title,'-',author_list[i],'    下载中\r')
-                    #m_url = self.save + self.mode + "\\" + nickname[i] + '\\' + re.sub(r'[\\/:*?"<>|\r\n]+', "_", music_title) + '_' + author_list[i] + '.mp3'
+                    #m_url = self.save + self.mode + nicknamePath + re.sub(r'[\\/:*?"<>|\r\n]+', "_", music_title) + '_' + author_list[i] + '.mp3'
                     #print(m_url)
                     #with open(m_url,'wb') as f:
                     #    f.write(music.content)
@@ -285,8 +321,18 @@ class TikTok():
                 content_size = int(video.headers['content-length']) # 下载文件总大小
                 try:
                     if video.status_code == 200:        #判断是否响应成功
-                        print('[  视频  ]'+author_list[i]+'[文件 大小]:{size:.2f} MB'.format(size = content_size / chunk_size /1024)) #开始下载，显示下载文件大小
-                        v_url = self.save + self.mode + "\\" + nickname[i] + '\\' + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + '.mp4'
+                        logStr = '[  视频  ]'+author_list[i]+'[文件 大小]:{size:.2f} MB'.format(size = content_size / chunk_size /1024)
+
+                        # 匹配成功中断下载
+                        if self.stopVid !='' and self.stopVid == vid and (self.mode == 'like'):
+                            print('下载完成')
+                            with open(log_file_name, 'w+') as f:
+                                f.write(logText)
+                            sys.exit()
+                            
+                        logText = logText + '\n' + logStr + ' ' + vid
+                        print(logStr + ' ' + vid)
+                        v_url = self.save + self.mode + nicknamePath + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + creat_time + '.mp4'
                         with open(v_url,'wb') as file: #显示进度条
                             for data in video.iter_content(chunk_size = chunk_size):
                                 file.write(data)
@@ -297,19 +343,21 @@ class TikTok():
                 except:
                     input('下载视频出错!')
                 #print('视频 ',author_list[i],'    下载中\r')
-                #v_url = self.save + self.mode + "\\" + nickname[i] + '\\' + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + '.mp4'
+                #v_url = self.save + self.mode + nicknamePath + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + creat_time + '.mp4'
                 #with open(v_url,'wb') as f:
                 #    f.write(video.content)
 
                 #保存视频动态封面
                 #dynamic = requests.get(dynamic_cover[i])
-                #with open(self.save + self.mode + '\\'+ nickname[i] + '\\' + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + '.webp','wb') as f:
+                #with open(self.save + self.mode + nicknamePath + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + creat_time + '.webp','wb') as f:
                 #    f.write(dynamic.content)
             except Exception as error:
                 #pass
                 print(error)
                 input('缓存失败，请检查！')
                 #sys.exit()
+        with open(log_file_name, 'w+') as f:
+            f.write(logText)
         self.next_data(max_cursor)
 
 #主模块执行
