@@ -96,6 +96,9 @@ class TikTok():
         #读取下载停止标记
         self.stopVid = str(self.cf.get("stopVid","stopVid"))
 
+        #开始解析的页数
+        self.max_cursor = self.cf.get("max_cursor","max_cursor")
+
         print('----读取配置完成----\r')
         self.judge_link()
 
@@ -326,7 +329,7 @@ class TikTok():
                         # 匹配成功中断下载
                         if self.stopVid !='' and self.stopVid == vid and (self.mode == 'like'):
                             print('下载完成')
-                            with open(log_file_name, 'w+') as f:
+                            with open(log_file_name, 'a+') as f:
                                 f.write(logText)
                             sys.exit()
                             
@@ -356,7 +359,7 @@ class TikTok():
                 print(error)
                 input('缓存失败，请检查！')
                 #sys.exit()
-        with open(log_file_name, 'w+') as f:
+        with open(log_file_name, 'a+') as f:
             f.write(logText)
         self.next_data(max_cursor)
 
