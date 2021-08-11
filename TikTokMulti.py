@@ -135,7 +135,8 @@ class TikTok():
             print('----为您下载多个视频----\r')
             #获取用户sec_uid
             #key = re.findall('&sec_uid=(.*?)&',str(r.url))[0]
-            key = re.findall('/user/(.*?)?',str(r.url))[0]
+            # key = re.findall('/user/(.*?)?',str(r.url))[0]
+            key = re.findall('/user/(.*)\?',str(r.url))[0]
             if not key:
                 key  = r.url[28:83]
             print('----'+'用户的sec_id='+key+'----')
@@ -166,7 +167,7 @@ class TikTok():
             print('----正在进行第 %d 次尝试----\r' % index)
             time.sleep(0.3)
             response = requests.get(url = api_post_url,headers=self.headers)
-            #print(api_post_url)
+            print(api_post_url)
             html = json.loads(response.content.decode())
             #print(html)
             if html['aweme_list'] != []:
@@ -191,7 +192,8 @@ class TikTok():
         r = requests.get(url = self.Find(self.uid)[0])
 
         #获取用户sec_uid
-        key = re.findall('/user/(.*?)?',str(r.url))[0]
+        # key = re.findall('/user/(.*?)?',str(r.url))[0]
+        key = re.findall('/user/(.*)\?',str(r.url))[0]
         if not key:
             key  = r.url[28:83]
 
