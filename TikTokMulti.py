@@ -148,7 +148,7 @@ class TikTok():
             return
 
         #第一次访问页码
-        max_cursor = 0
+        max_cursor = self.max_cursor
 
         #构造第一次访问链接
         api_post_url = 'https://www.iesdouyin.com/web/api/v2/aweme/%s/?sec_uid=%s&count=%s&max_cursor=%s&max_cursor=0&aid=1128&_signature=PDHVOQAAXMfFyj02QEpGaDwx1S&dytk=' % (self.mode,key,str(self.count),max_cursor)
