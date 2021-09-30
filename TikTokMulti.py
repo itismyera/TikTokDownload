@@ -20,7 +20,7 @@ class TikTok():
             }
 
         #绘制布局
-        print("#" * 110)
+        print("#" * 120)
         print( 
     """
                                                 TikTokDownload V1.2.2
@@ -33,7 +33,7 @@ class TikTok():
     注意：  单个视频链接与用户主页链接要分清，软件闪退可以通过终端运行查看报错信息（一般是链接弄错的问题）
     """
         )
-        print("#" * 110)
+        print("#" * 120)
         print('\r')
 
         if os.path.isfile("conf.ini") == True:
@@ -253,6 +253,11 @@ class TikTok():
         self.videos_download(author_list,video_list,aweme_id,nickname,dynamic_cover,max_cursor)      
         return self,author_list,video_list,aweme_id,nickname,dynamic_cover,max_cursor
 
+    #检测视频是否已经下载过
+    def check_info(self,path):
+        v_info = os.listdir(path)  
+        return v_info
+
     def videos_download(self,author_list,video_list,aweme_id,nickname,dynamic_cover,max_cursor):
         nicknamePath = '/'
         log_file_name = ''
@@ -266,10 +271,16 @@ class TikTok():
                 else:
                     nicknamePath = '/' + self.fabu_time(int(time.time()), 1) + '/'
                 log_file_name = self.save + self.mode + nicknamePath + self.fabu_time(int(time.time()), 1) + '.txt'
+                
+                v_info = self.check_info(self.save + self.mode + nicknamePath) 
+
                 os.makedirs(self.save + self.mode + nicknamePath)
+
             except:
                 #有目录不再创建
                 pass
+
+            #下载音频
             try:
                 jx_url  = f'https://www.iesdouyin.com/web/api/v2/aweme/iteminfo/?item_ids={aweme_id[i]}'    #官方接口
                 js = json.loads(requests.get(url = jx_url,headers=self.headers).text)
@@ -317,6 +328,8 @@ class TikTok():
                 #print('该音频目前不可用\r')
                 #else:
                 #    pass
+
+            #下载视频
             try:
                 video = requests.get(video_list[i])
                 #保存视频
@@ -338,6 +351,22 @@ class TikTok():
                         logText = logText + '\n' + logStr + ' ' + vid
                         print(logStr + ' ' + vid)
                         v_url = self.save + self.mode + nicknamePath + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + creat_time + '.mp4'
+
+                        #每次判断视频是否已经下载过
+                        if self.mode == 'post':
+                            try:
+                                file_name = re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + creat_time + '.mp4'
+                                if file_name in v_info:
+                                    print('[  提示  ]:'+author_list[i]+'[文件已存在，为您跳过]',end = "") #开始下载，显示下载文件大小
+                                    for i in range(20):
+                                        print(">",end = '',flush = True)
+                                        time.sleep(0.01)
+                                    print('\r')
+                                    continue
+                            except:
+                                #防止下标越界
+                                pass
+
                         with open(v_url,'wb') as file: #显示进度条
                             for data in video.iter_content(chunk_size = chunk_size):
                                 file.write(data)
