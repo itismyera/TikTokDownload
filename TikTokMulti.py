@@ -122,12 +122,37 @@ class TikTok():
             fabu_time = '({})'.format(time.strftime("%Y-%m-%d %H-%M-%S", timeArray))
         return fabu_time
 
+    def get_follow_url(self, user_id, sec_user_id):
+        ts = str(time.time()).split(".")[0]
+        _rticket = str(time.time() * 1000).split(".")[0]
+        max_time = ts
+        url= "https://api.amemv.com/aweme/v1/user/{}/list/?" \
+          "user_id={}" \
+          "&max_time={}" \
+          "&count=20&offset=0&source_type=1&address_book_access=2&gps_access=2" \
+          "&ts={}" \
+          "&js_sdk_version=1.16.3.5&app_type=normal&manifest_version_code=630" \
+          "&_rticket={}" \
+          "&ac=wifi&device_id=47xxxx747444&iid=18468xxx477740845" \
+          "&os_version=8.0.0&channel=wandoujia_aweme1&version_code=630" \
+          "&device_type=HUAWEI%20NXT-AL10&language=zh&resolution=1080*1812&openudid=b202a24ebxxx538a" \
+          "&update_version_code=6302&app_name=aweme&version_name=6.3.0&os_api=26&device_brand=HUAWEI&ssmix=a" \
+          "&device_platform=android&dpi=480&aid=1128" \
+          "&sec_user_id={}".format(self.mode, user_id, max_time, ts, _rticket, sec_user_id)
+        return url
+
+
     #判断个人主页api链接
     def judge_link(self):
         #获取解码后原地址
         r = requests.get(url = self.Find(self.uid)[0])
         multi_url = 'https://www.douyin.com/user/'
         #multi_url = 'https://www.iesdouyin.com/share/user/'
+
+        with open(self.save + "aa.txt", 'a+') as f:
+                f.write(r)
+
+        return
 
         #判断输入的是不是用户主页
         #if r.url[:27] == multi_url:
@@ -170,6 +195,12 @@ class TikTok():
             print(api_post_url)
             html = json.loads(response.content.decode())
             #print(html)
+
+            # with open(self.save + "aa.txt", 'a+') as f:
+            #     f.write(response.content.decode())
+
+            # return
+
             if html['aweme_list'] != []:
                 #下一页值
                 self.nickname = html['aweme_list'][0]['author']['nickname']
@@ -271,10 +302,13 @@ class TikTok():
                 else:
                     nicknamePath = '/' + self.fabu_time(int(time.time()), 1) + '/'
                 log_file_name = self.save + self.mode + nicknamePath + self.fabu_time(int(time.time()), 1) + '.txt'
-                
-                v_info = self.check_info(self.save + self.mode + nicknamePath) 
 
-                os.makedirs(self.save + self.mode + nicknamePath)
+                v_info = []
+
+                if os.path.exists(self.save + self.mode + nicknamePath):
+                    v_info = self.check_info(self.save + self.mode + nicknamePath) 
+                else:
+                    os.makedirs(self.save + self.mode + nicknamePath)
 
             except:
                 #有目录不再创建
