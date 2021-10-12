@@ -149,10 +149,10 @@ class TikTok():
         multi_url = 'https://www.douyin.com/user/'
         #multi_url = 'https://www.iesdouyin.com/share/user/'
 
-        with open(self.save + "aa.txt", 'a+') as f:
-                f.write(r)
+        # with open(self.save + "aa.txt", 'a+') as f:
+        #         f.write(r)
 
-        return
+        # return
 
         #判断输入的是不是用户主页
         #if r.url[:27] == multi_url:
@@ -231,6 +231,8 @@ class TikTok():
         #构造下一次访问链接
         api_naxt_post_url = 'https://www.iesdouyin.com/web/api/v2/aweme/%s/?sec_uid=%s&count=%s&max_cursor=%s&aid=1128&_signature=RuMN1wAAJu7w0.6HdIeO2EbjDc&dytk=' % (self.mode,key,str(self.count),max_cursor)
         
+        # print("下一次的url:"+api_naxt_post_url)
+
         index = 0
         result = []
         while result == []:
@@ -240,14 +242,18 @@ class TikTok():
             response = requests.get(url = api_naxt_post_url,headers=self.headers)
             html = json.loads(response.content.decode())
 
-            if html['aweme_list'] != []:
+            # if html['aweme_list'] != []:
+            if html['has_more'] == True:
                 #下一页值
                 max_cursor = html['max_cursor']
                 result = html['aweme_list']
                 print('----',max_cursor,'页抓获数据成功----\r')
 
                 #处理下一页视频信息
-                self.video_info(result,max_cursor)
+                if html['aweme_list'] != []:
+                    self.video_info(result,max_cursor)
+                else:
+                    self.next_data(max_cursor)
             else:
                 print('----',max_cursor,'页抓获数据失败----\r')
                 sys.exit()
