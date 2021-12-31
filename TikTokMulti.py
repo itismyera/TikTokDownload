@@ -9,7 +9,7 @@
 @Mail       :johnserfseed@gmail.com
 '''
 
-import requests,json,os,time,configparser,re,sys
+import requests,json,os,time,configparser,re,sys,glob
 import TikTokDownload
 
 class TikTok():
@@ -55,6 +55,10 @@ class TikTok():
                 self.cf.set("mode", "mode", "post")
                 self.cf.add_section("stopVid")
                 self.cf.set("stopVid", "stopVid", "")
+                self.cf.add_section("max_download")
+                self.cf.set("max_download", "max_download", "0")
+                self.cf.add_section("max_cursor")
+                self.cf.set("max_cursor", "max_cursor", "0")
                 with open("conf.ini","a+") as f:
                     self.cf.write(f)
                 print('----生成成功----')
@@ -98,6 +102,11 @@ class TikTok():
 
         #开始解析的页数
         self.max_cursor = self.cf.get("max_cursor","max_cursor")
+
+        #最大下载数量
+        self.max_download = int(self.cf.get("max_download","max_download"))
+
+        self.download_num = 0
 
         print('----读取配置完成----\r')
         self.judge_link()
@@ -292,14 +301,20 @@ class TikTok():
 
     #检测视频是否已经下载过
     def check_info(self,path):
-        v_info = os.listdir(path)  
+        v_info = os.listdir(path)
         return v_info
+
+    def save_log_text(self,logText,log_file_name):
+        with open(log_file_name, 'a+') as f:
+            f.write(logText)
 
     def videos_download(self,author_list,video_list,aweme_id,nickname,dynamic_cover,max_cursor):
         nicknamePath = '/'
         log_file_name = ''
-        logText = ''
+        logText = '\n'
         vid = ''
+        hasWriteCursor = False
+
         for i in range(self.count):
             try:
                 #创建并检测下载目录是否存在
@@ -307,6 +322,7 @@ class TikTok():
                     nicknamePath = '/' + nickname[i] + '/'
                 else:
                     nicknamePath = '/' + self.fabu_time(int(time.time()), 1) + '/'
+
                 log_file_name = self.save + self.mode + nicknamePath + self.fabu_time(int(time.time()), 1) + '.txt'
 
                 v_info = []
@@ -315,6 +331,17 @@ class TikTok():
                     v_info = self.check_info(self.save + self.mode + nicknamePath) 
                 else:
                     os.makedirs(self.save + self.mode + nicknamePath)
+
+                if hasWriteCursor == False:
+                    tmpStr = '\n' + 'max_cursor:' + str(max_cursor)
+                    self.save_log_text(tmpStr, log_file_name)
+                    hasWriteCursor = True
+
+                    #达到设置的最大数量停止下载
+                    if self.max_download != 0 and self.download_num >= self.max_download: #爬取的数量达到了退出
+                        print("self.max_download :" + str(self.max_download))
+                        print("self.download_num :" + str(self.download_num))
+                        return
 
             except:
                 #有目录不再创建
@@ -364,7 +391,7 @@ class TikTok():
                 #print(error)
                 #if music_url == '':
                 print('该页视频没有'+str(self.count)+'个,已为您跳过')
-                break
+                continue
                 #print('该音频目前不可用\r')
                 #else:
                 #    pass
@@ -379,13 +406,12 @@ class TikTok():
                 content_size = int(video.headers['content-length']) # 下载文件总大小
                 try:
                     if video.status_code == 200:        #判断是否响应成功
-                        logStr = '[  视频  ]'+author_list[i]+'[文件 大小]:{size:.2f} MB'.format(size = content_size / chunk_size /1024)
+                        logStr = '[  视频' + str(self.download_num+1) + '  ]'+author_list[i]+'[文件 大小]:{size:.2f} MB'.format(size = content_size / chunk_size /1024)
 
                         # 匹配成功中断下载
                         if self.stopVid !='' and self.stopVid == vid and (self.mode == 'like'):
                             print('下载完成')
-                            with open(log_file_name, 'a+') as f:
-                                f.write(logText)
+                            self.save_log_text(logText,log_file_name)
                             sys.exit()
                             
                         logText = logText + '\n' + logStr + ' ' + vid
@@ -408,6 +434,7 @@ class TikTok():
                                 pass
 
                         with open(v_url,'wb') as file: #显示进度条
+                            self.download_num = self.download_num + 1
                             for data in video.iter_content(chunk_size = chunk_size):
                                 file.write(data)
                                 size +=len(data)
@@ -416,6 +443,7 @@ class TikTok():
                             print('\n' + '[下载完成]:耗时: %.2f秒\n' % (end - start)) #输出下载用时时间
                 except:
                     input('下载视频出错!')
+                    self.save_log_text(logText,log_file_name)
                 #print('视频 ',author_list[i],'    下载中\r')
                 #v_url = self.save + self.mode + nicknamePath + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + creat_time + '.mp4'
                 #with open(v_url,'wb') as f:
@@ -428,10 +456,10 @@ class TikTok():
             except Exception as error:
                 #pass
                 print(error)
+                self.save_log_text(logText,log_file_name)
                 input('缓存失败，请检查！')
                 #sys.exit()
-        with open(log_file_name, 'a+') as f:
-            f.write(logText)
+        self.save_log_text(logText,log_file_name)
         self.next_data(max_cursor)
 
 #主模块执行
