@@ -282,6 +282,9 @@ class TikTok():
         #作者id
         nickname = []
 
+        #类型
+        aweme_type = []
+
         #封面大图
         dynamic_cover = []
         for i2 in range(self.count):
@@ -289,15 +292,31 @@ class TikTok():
                 author_list.append(str(result[i2]['desc']))
                 video_list.append(str(result[i2]['video']['play_addr']['url_list'][0]))
                 aweme_id.append(str(result[i2]['aweme_id']))
+                aweme_type.append(str(result[i2]['aweme_type']))
                 nickname.append(str(result[i2]['author']['nickname']))
                 dynamic_cover.append(str(result[i2]['video']['dynamic_cover']['url_list'][0]))
+                
+                #打log
+                # print(str(result[i2]['aweme_type']))
+                # print(str(result[i2]['aweme_id']))
+                # with open(self.save + str(result[i2]['desc']) +'.txt', 'a+') as f:
+                    # f.write(str(result[i2]))
+                    
+
             except Exception as error:
                 pass
                 #print(error)
                 #input('视频信息处理失败...')
                 #sys.exit()
-        self.videos_download(author_list,video_list,aweme_id,nickname,dynamic_cover,max_cursor)      
-        return self,author_list,video_list,aweme_id,nickname,dynamic_cover,max_cursor
+        #打log
+        # print(str(len(image_infos)))
+        # for k in range(len(image_infos)):
+        #     print(image_infos[k])
+        # with open(self.save + "tt.txt", 'a+') as f:
+        #     f.write(str(result))
+
+        self.videos_download(author_list,video_list,aweme_id,nickname,dynamic_cover,max_cursor,aweme_type)      
+        return self,author_list,video_list,aweme_id,nickname,dynamic_cover,max_cursor,aweme_type
 
     #检测视频是否已经下载过
     def check_info(self,path):
@@ -308,43 +327,79 @@ class TikTok():
         with open(log_file_name, 'a+') as f:
             f.write(logText)
 
-    def videos_download(self,author_list,video_list,aweme_id,nickname,dynamic_cover,max_cursor):
+    def downloadImages(self, images_title, aweme_id, img_path):
+        #图片下载
+        jx_url  = f'https://www.iesdouyin.com/web/api/v2/aweme/iteminfo/?item_ids={aweme_id}'    #官方接口
+        print('jx_url:' + jx_url)
+        js = json.loads(requests.get(url = jx_url,headers=self.headers).text)
+        images = js['item_list'][0]['images']
+            
+        for i in range(len(images)):
+            images_url = images[i]['download_url_list'][0]
+            if images_url == '' or images_url == None:
+                print('该图片可能无法下载哦~')
+                continue
+            else:
+                r=requests.get(url=images_url,headers=self.headers)
+                if images_title == '':
+                    images_title = str(time.time() * 1000).split(".")[0]
+                image_title = images_title + '_' + str(i+1)
+                image_file = img_path + image_title + '.jpeg'
+                print('[  图片  ]' + image_title)
+                with open(image_file,'wb') as f:
+                    f.write(r.content)
+
+    def videos_download(self,author_list,video_list,aweme_id,nickname,dynamic_cover,max_cursor,aweme_type):
         nicknamePath = '/'
         log_file_name = ''
         logText = '\n'
         vid = ''
         hasWriteCursor = False
+        v_info = []
+        full_path = ''
+        img_path = ''
+
+        try:
+            #创建并检测下载目录是否存在
+            if self.mode == 'post':
+                nicknamePath = '/' + nickname[0] + '/'
+            else:
+                nicknamePath = '/' + self.fabu_time(int(time.time()), 1) + '/'
+
+            full_path = self.save + self.mode + nicknamePath
+            img_path = full_path + 'img/'
+            log_file_name = full_path + self.fabu_time(int(time.time()), 1) + '.txt'
+
+            if os.path.exists(full_path):
+                v_info = self.check_info(full_path) 
+            else:
+                os.makedirs(full_path)
+                os.makedirs(img_path)
+        except:
+            #有目录不再创建
+            pass
 
         for i in range(self.count):
+            if hasWriteCursor == False:
+                tmpStr = '\n' + 'max_cursor:' + str(max_cursor)
+                self.save_log_text(tmpStr, log_file_name)
+                hasWriteCursor = True
+
+                #达到设置的最大数量停止下载
+                if self.max_download != 0 and self.download_num >= self.max_download: #爬取的数量达到了退出
+                    print("self.max_download :" + str(self.max_download))
+                    print("self.download_num :" + str(self.download_num))
+                    return
+
             try:
-                #创建并检测下载目录是否存在
-                if self.mode == 'post':
-                    nicknamePath = '/' + nickname[i] + '/'
-                else:
-                    nicknamePath = '/' + self.fabu_time(int(time.time()), 1) + '/'
-
-                log_file_name = self.save + self.mode + nicknamePath + self.fabu_time(int(time.time()), 1) + '.txt'
-
-                v_info = []
-
-                if os.path.exists(self.save + self.mode + nicknamePath):
-                    v_info = self.check_info(self.save + self.mode + nicknamePath) 
-                else:
-                    os.makedirs(self.save + self.mode + nicknamePath)
-
-                if hasWriteCursor == False:
-                    tmpStr = '\n' + 'max_cursor:' + str(max_cursor)
-                    self.save_log_text(tmpStr, log_file_name)
-                    hasWriteCursor = True
-
-                    #达到设置的最大数量停止下载
-                    if self.max_download != 0 and self.download_num >= self.max_download: #爬取的数量达到了退出
-                        print("self.max_download :" + str(self.max_download))
-                        print("self.download_num :" + str(self.download_num))
-                        return
-
+                print('aweme_type:' + aweme_type[i])
+                if int(aweme_type[i]) == 2:#图片下载
+                    logStr = '[  图片集  ]'+author_list[i]
+                    print(logStr)
+                    logText = logText + '\n' + logStr
+                    self.downloadImages(author_list[i],aweme_id[i],img_path)
+                    continue
             except:
-                #有目录不再创建
                 pass
 
             #下载音频
@@ -372,7 +427,7 @@ class TikTok():
                             logStr = '[  音频  ]'+author_list[i]+'[文件 大小]:{size:.2f} MB'.format(size = content_size / chunk_size /1024)
                             logText = logText + '\n' + logStr
                             print(logStr) #开始下载，显示下载文件大小
-                            m_url = self.save + self.mode + nicknamePath + re.sub(r'[\\/:*?"<>|\r\n]+', "_", music_title) + '_' + author_list[i] + creat_time + '.mp3'
+                            m_url = full_path + re.sub(r'[\\/:*?"<>|\r\n]+', "_", music_title) + '_' + author_list[i] + creat_time + '.mp3'
                             with open(m_url,'wb') as file: #显示进度条
                                 for data in music.iter_content(chunk_size = chunk_size):
                                     file.write(data)
@@ -383,7 +438,7 @@ class TikTok():
                     except:
                         input('下载音频出错!')
                     #print('音频 ',music_title,'-',author_list[i],'    下载中\r')
-                    #m_url = self.save + self.mode + nicknamePath + re.sub(r'[\\/:*?"<>|\r\n]+', "_", music_title) + '_' + author_list[i] + '.mp3'
+                    #m_url = full_path + re.sub(r'[\\/:*?"<>|\r\n]+', "_", music_title) + '_' + author_list[i] + '.mp3'
                     #print(m_url)
                     #with open(m_url,'wb') as f:
                     #    f.write(music.content)
@@ -404,6 +459,13 @@ class TikTok():
                 size = 0            #初始化已下载大小
                 chunk_size = 1024   #每次下载的数据大小
                 content_size = int(video.headers['content-length']) # 下载文件总大小
+
+                #打log
+                # print(str(author_list[i] + '--------' + aweme_type[i]))
+                # with open(self.save + "bb.txt", 'a+') as f:
+                #     log_1 = video_list[i] + '\n' + author_list[i] + '\n' + duration[i] +  '\n\n\n'
+                #     f.write(log_1)
+
                 try:
                     if video.status_code == 200:        #判断是否响应成功
                         logStr = '[  视频' + str(self.download_num+1) + '  ]'+author_list[i]+'[文件 大小]:{size:.2f} MB'.format(size = content_size / chunk_size /1024)
@@ -416,7 +478,7 @@ class TikTok():
                             
                         logText = logText + '\n' + logStr + ' ' + vid
                         print(logStr + ' ' + vid)
-                        v_url = self.save + self.mode + nicknamePath + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + creat_time + '.mp4'
+                        v_url = full_path + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + creat_time + '.mp4'
 
                         #每次判断视频是否已经下载过
                         if self.mode == 'post':
@@ -445,13 +507,13 @@ class TikTok():
                     input('下载视频出错!')
                     self.save_log_text(logText,log_file_name)
                 #print('视频 ',author_list[i],'    下载中\r')
-                #v_url = self.save + self.mode + nicknamePath + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + creat_time + '.mp4'
+                #v_url = full_path + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + creat_time + '.mp4'
                 #with open(v_url,'wb') as f:
                 #    f.write(video.content)
 
                 #保存视频动态封面
                 #dynamic = requests.get(dynamic_cover[i])
-                #with open(self.save + self.mode + nicknamePath + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + creat_time + '.webp','wb') as f:
+                #with open(full_path + re.sub(r'[\\/:*?"<>|\r\n]+', "_", author_list[i]) + creat_time + '.webp','wb') as f:
                 #    f.write(dynamic.content)
             except Exception as error:
                 #pass
