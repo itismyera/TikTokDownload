@@ -167,12 +167,18 @@ class TikTok():
         #if r.url[:27] == multi_url:
         if r.url[:28] == multi_url:
             print('----为您下载多个视频----\r')
+            print('url=', str(r.url))
             #获取用户sec_uid
+            '''
+            20220607改，长短连接问题
             #key = re.findall('&sec_uid=(.*?)&',str(r.url))[0]
-            # key = re.findall('/user/(.*?)?',str(r.url))[0]
-            key = re.findall('/user/(.*)\?',str(r.url))[0]
+            key = re.findall('/user/(.*?)?',str(r.url))[0]
+            # key = re.findall('/user/(.*)\?',str(r.url))[0]
             if not key:
                 key  = r.url[28:83]
+            '''
+            for one in re.finditer(r'user\/([\d\D]*)',str(r.url)):
+                key= one.group(1)
             print('----'+'用户的sec_id='+key+'----')
         else:
             print('----为您下载单个视频----\r')
@@ -232,10 +238,16 @@ class TikTok():
         r = requests.get(url = self.Find(self.uid)[0])
 
         #获取用户sec_uid
-        # key = re.findall('/user/(.*?)?',str(r.url))[0]
-        key = re.findall('/user/(.*)\?',str(r.url))[0]
+        '''
+        20220607改，长短连接问题
+        key = re.findall('/user/(.*?)?',str(r.url))[0]
+        # key = re.findall('/user/(.*)\?',str(r.url))[0]
+
         if not key:
             key  = r.url[28:83]
+        '''
+        for one in re.finditer(r'user\/([\d\D]*)',str(r.url)):
+            key= one.group(1)
 
         #构造下一次访问链接
         api_naxt_post_url = 'https://www.iesdouyin.com/web/api/v2/aweme/%s/?sec_uid=%s&count=%s&max_cursor=%s&aid=1128&_signature=RuMN1wAAJu7w0.6HdIeO2EbjDc&dytk=' % (self.mode,key,str(self.count),max_cursor)
