@@ -155,17 +155,19 @@ class TikTok():
     def judge_link(self):
         #获取解码后原地址
         r = requests.get(url = self.Find(self.uid)[0])
-        multi_url = 'https://www.douyin.com/user/'
-        #multi_url = 'https://www.iesdouyin.com/share/user/'
+        # multi_url = 'https://www.douyin.com/user/'
+        multi_url = 'https://www.iesdouyin.com/share/user/'
+        url_len = len(multi_url)
 
+
+        # print('url len =', url_len)
         # with open(self.save + "aa.txt", 'a+') as f:
-        #         f.write(r)
-
+        #         f.write(r.url)
         # return
 
         #判断输入的是不是用户主页
         #if r.url[:27] == multi_url:
-        if r.url[:28] == multi_url:
+        if r.url[:url_len] == multi_url:
             print('----为您下载多个视频----\r')
             print('url=', str(r.url))
             #获取用户sec_uid
@@ -208,13 +210,12 @@ class TikTok():
             time.sleep(0.3)
             response = requests.get(url = api_post_url,headers=self.headers)
             print(api_post_url)
-            html = json.loads(response.content.decode())
+            # html = json.loads(response.content.decode())
             #print(html)
 
-            # with open(self.save + "aa.txt", 'a+') as f:
-            #     f.write(response.content.decode())
-
-            # return
+            with open(self.save + "aa.txt", 'a+') as f:
+                f.write(response.content.decode())
+            return
 
             if html['aweme_list'] != []:
                 #下一页值
