@@ -31,7 +31,7 @@ class TikTok():
         使用说明：
                 1、本程序目前支持命令行调用和配置文件操作，GUI预览版本已经发布
                 2、命令行操作方法：1）将本程序路径添加到环境变量
-                                2）控制台输入 TikTokMulti -u https://v.douyin.com/JtcjTwo/
+                                2）控制台输入 TikTokMulti -u https://v.douyin.com/jqwLHjF/
 
                 3、配置文件操作方法：1）运行软件前先打开目录下 conf.ini 文件按照要求进行配置
                                 2）按照控制台输出信息操作
@@ -52,7 +52,7 @@ class TikTok():
         self.sec = ''
 
         # 检测配置文件
-        if os.path.isfile("conf.ini") == True:
+        if os.path.isfile("conf.conf") == True:
             pass
         else:
             print('[  提示  ]:没有检测到配置文件，生成中!\r')
@@ -60,7 +60,7 @@ class TikTok():
                 self.cf = configparser.ConfigParser()
                 # 往配置文件写入内容
                 self.cf.add_section("url")
-                self.cf.set("url", "uid", "https://v.douyin.com/JcjJ5Tq/")
+                self.cf.set("url", "uid", "https://v.douyin.com/jqwLHjF/")
                 self.cf.add_section("music")
                 self.cf.set("music", "musicarg", "yes")
                 self.cf.add_section("count")
@@ -69,13 +69,13 @@ class TikTok():
                 self.cf.set("save", "url", ".\\Download\\")
                 self.cf.add_section("mode")
                 self.cf.set("mode", "mode", "post")
-                with open("conf.ini", "a+") as f:
+                with open("conf.conf", "a+") as f:
                     self.cf.write(f)
                 print('[  提示  ]:生成成功!\r')
             except:
                 input('[  提示  ]:生成失败,正在为您下载配置文件!\r')
-                r =requests.get('https://gitee.com/johnserfseed/TikTokDownload/raw/main/conf.ini')
-                with open("conf.ini", "a+") as conf:
+                r =requests.get('https://gitee.com/johnserfseed/TikTokDownload/raw/main/conf.conf')
+                with open("conf.conf", "a+") as conf:
                     conf.write(r.content)
                 sys.exit()
 
@@ -83,7 +83,7 @@ class TikTok():
         self.cf = configparser.ConfigParser()
 
         # 用utf-8防止出错
-        self.cf.read("conf.ini", encoding="utf-8")
+        self.cf.read("conf.conf", encoding="utf-8")
 
     def setting(self,uid,music,count,dir,mode):
         """
@@ -141,15 +141,40 @@ class TikTok():
             'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', string)
         return url
 
+    def replaceT(self, obj):
+        """
+        @description  : 替换文案非法字符
+        ---------
+        @param  : ojb 传入对象
+        -------
+        @Returns  : n 处理后的内容
+        -------
+        """
+        r = r"[\/\\\:\*\?\"\<\>\|]"  # '/ \ : * ? " < > |'
+        if type(obj) == list:
+            new = []
+            for i in obj:
+                # 替换为下划线
+                retest = re.sub(r, "_", i)
+                new.append(retest)
+        elif type(obj) == str:
+            # 替换为下划线
+            new = re.sub(r, "_", obj)
+        return new
+
     # 判断个人主页api链接
     def judge_link(self):
         # 判断长短链
         r = requests.get(url = self.Find(self.uid)[0])
         print('[  提示  ]:为您下载多个视频!\r')
         # 获取用户sec_uid
-        for one in re.finditer(r'user\/([\d\D]*)',str(r.url)):
-            self.sec = one.group(1)
-        # key = re.findall('/user/(.*?)\?', str(r.url))[0]
+        if '?' in r.request.path_url:
+            for one in re.finditer(r'user\/([\d\D]*)([?])', str(r.request.path_url)):
+                self.sec = one.group(1)
+        else:
+            for one in re.finditer(r'user\/([\d\D]*)', str(r.request.path_url)):
+                self.sec = one.group(1)
+        # 2022/08/24: 直接采用request里的path_url，用user\/([\d\D]*)([?])过滤出sec
         print('[  提示  ]:用户的sec_id=%s\r' % self.sec)
         #else:
         #    r = requests.get(url = self.Find(self.uid)[0])
@@ -216,25 +241,6 @@ class TikTok():
 
     # 下一页
     def next_data(self,max_cursor):
-        # 获取解码后原地址
-        r = requests.get(url = self.Find(self.uid)[0])
-
-        # 获取用户sec_uid
-        #key = re.findall('/user/(.*?)\?', str(r.url))[0]
-        #if not key:
-        #    key = r.url[28:83]
-        # key = self.sec
-
-        if self.uid[0:20] == 'https://v.douyin.com':
-            r = requests.get(url = self.Find(self.uid)[0])
-            # 获取用户sec_uid
-            for one in re.finditer(r'user/([\d\D]*?)\?',str(r.url)):
-                self.sec = one.group(1)
-        else:
-            r = requests.get(url = self.Find(self.uid)[0])
-            for one in re.finditer(r'user\/([\d\D]*)',str(r.url)):
-                self.sec = one.group(1)
-
         # 构造下一次访问链接
         api_naxt_post_url = 'https://www.iesdouyin.com/web/api/v2/aweme/%s/?sec_uid=%s&count=%s&max_cursor=%s&aid=1128&_signature=RuMN1wAAJu7w0.6HdIeO2EbjDc&dytk=' % (
             self.mode, self.sec, str(self.count), max_cursor)
@@ -284,6 +290,11 @@ class TikTok():
             except Exception as error:
                 # print(error)
                 pass
+        # 过滤视频文案和作者名中的非法字符
+        print('[  提示  ]:等待替换文案非法字符!\r')
+        author_list = self.replaceT(author_list)
+        print('[  提示  ]:等待替换作者非法字符!\r')
+        nickname = self.replaceT(nickname)
         self.videos_download(author_list, video_list, uri_list, aweme_id, nickname, max_cursor)
         return self,author_list,video_list,uri_list,aweme_id,nickname,max_cursor
 
@@ -385,7 +396,7 @@ class TikTok():
             try:
                 new_video_list.append(uri_url % uri_list[i])            # 生成1080p视频链接
                 video = requests.get(video_list[i])                     # 视频信息
-                t_video = requests.get(url=new_video_list[i],
+                t_video = requests.get(url=new_video_list[0],
                     headers=self.headers).content                       # 视频内容
                 start = time.time()                                     # 下载开始时间
                 size = 0                                                # 初始化已下载大小
@@ -412,6 +423,7 @@ class TikTok():
                             end = time.time()                           # 下载结束时间
                             print('\n' + '[下载完成]:耗时: %.2f秒\n' % (
                                 end - start))                           # 输出下载用时时间
+                            new_video_list = []
 
                 except Exception as error:
                     print('[  警告  ]:下载视频出错!')
@@ -448,5 +460,6 @@ if __name__ == "__main__":
         get_args(args.user, args.dir, args.music, args.count, args.mode)
     except Exception as e:
         # print(e)
+        print('[  警告  ]:',e,'可以复制此报错内容发issues')
         print('[  提示  ]:未输入命令或意外出错，自动退出!')
         sys.exit(0)
