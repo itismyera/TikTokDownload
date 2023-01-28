@@ -42,6 +42,8 @@ class Command:
         # parser.add_argument('--count', '-c', type=int, help='单页下载的数量，默认参数 35 无须修改', default=35)
         parser.add_argument('--mode', '-M', type=str,
                             help='下载模式选择，默认post:发布的视频 可选like:点赞视频(需要开放权限)', default='post')
+        parser.add_argument('--nk', '-n', type=str,
+                            help='nickname，取不到nickname时使用', default='')
         args = parser.parse_args()
         return args
 
@@ -57,13 +59,15 @@ class Command:
             self.uid = self.cfg.get('uid', 'uid')
             self.music = self.cfg.get('music', 'music')
             self.mode = self.cfg.get('mode', 'mode')
+            self.nk = self.cfg.get('nk', 'nk')
             print('[  提示  ]:读取本地配置完成!\r')
         else:
             self.uid = args.uid
             self.music = args.music
             self.mode = args.mode
+            self.nk = args.nk
             print('[  提示  ]:读取命令完成!\r')
-        return [self.uid, self.music, self.mode]
+        return [self.uid, self.music, self.mode, self.nk]
 
 
 if __name__ == '__main__':

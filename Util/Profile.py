@@ -15,6 +15,8 @@ Change Log  :
 '''
 
 import Util
+import os
+import json
 
 ############apis############
 # /aweme/v1/web/aweme/detail/       'aweme_detail'
@@ -39,13 +41,14 @@ class Profile():
         """判断个人主页api链接
 
         Args:
-            param (tuple): uid,music,mode | ('https://v.douyin.com/efrHYf2/', 'no', 'post')
+            param (tuple): uid,music,mode,nk | ('https://v.douyin.com/efrHYf2/', 'no', 'post', '')
 
         Returns:
             _type_: _description_
         """
         self.music = param[1]
         self.mode = param[2]
+        self.nk = param[3]
 
         r = Util.requests.post(url=Util.reFind(param[0])[0])
 
@@ -54,11 +57,21 @@ class Profile():
         # 输出日志
         Util.log.info('[  提示  ]:为您下载多个视频!')
 
+        # self.save = os.getcwd() + '/test/'
+        # with open(self.save + "aa.txt", 'a+') as f:
+        #         f.write(str(r.request.path_url) + '\n\n')
+        # return
+
         # 获取用户sec_uid
         # 2022/08/24: 直接采用request里的path_url，用user\/([\d\D]*)([?])过滤出sec
+        self.sec = ''
         if '?' in r.request.path_url:
-            for one in Util.re.finditer(r'user\/([\d\D]*)([?])', str(r.request.path_url)):
+            # for one in Util.re.finditer(r'user\/([\d\D]*)([?])', str(r.request.path_url)):
+            for one in Util.re.finditer(r'sec_uid=\/([\d\D]*)([&])', str(r.request.path_url)):
                 self.sec = one.group(1)
+            if self.sec[0:4] != 'MS4w':
+                for one in Util.re.finditer(r'user\/([\d\D]*)([?])', str(r.request.path_url)):
+                    self.sec = one.group(1)
         else:
             for one in Util.re.finditer(r'user\/([\d\D]*)', str(r.request.path_url)):
                 self.sec = one.group(1)
@@ -80,6 +93,13 @@ class Profile():
             self.sec)
         post_name_json = Util.json.loads(Util.requests.get(
             url=post_url, headers=self.headers).content.decode())
+
+        # self.save = os.getcwd() + '/test/'
+        # with open(self.save + "bb.txt", 'a+') as f:
+        #         f.write(str(Util.requests.get(
+        #     url=self.homepage, headers=self.headers).content.decode()) + '\n\n')
+        # return
+
         # 2022/09/05
         # 因为抖音页面分离技术，最初获取的网页信息没有经过js渲染，无法获取like模式下的用户名，故均用post模式获取用户名
         try:
@@ -96,7 +116,10 @@ class Profile():
             # ERROR: list index out of range
             # {'status_code': 0, 'aweme_list': [], 'max_cursor': 0, 'min_cursor': xxx, 'extra': {'now': xxx, 'logid': 'xxx'}, 'has_more': False}
             input('[  提示  ]：按任意键退出程序!\r')
-            exit()
+            if self.nk != '':
+                self.nickname = self.nk
+            else:
+                exit()
 
         # 构造第一次访问链接
         if self.mode == 'post':

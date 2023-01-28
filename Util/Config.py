@@ -25,7 +25,8 @@ class Config:
             'uid': 'https://v.douyin.com/k9NXNcH/',
             'music': 'yes',
             'path': 'Download',
-            'mode': 'post'
+            'mode': 'post',
+            'nk' : ''
         }
 
     def check(self):
@@ -53,6 +54,8 @@ class Config:
                 # self.cf.set("path", "path", ".\\Download\\")
                 self.cf.add_section("mode")
                 self.cf.set("mode", "mode", "post")
+                self.cf.add_section("nk")
+                self.cf.set("nk", "nk", "")
                 with open("conf.ini", "w") as f:
                     self.cf.write(f)
                 print('[  提示  ]:生成成功!\r')
